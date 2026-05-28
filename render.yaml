@@ -1,0 +1,28 @@
+services:
+  - type: web
+    name: ai-receptionist-autopilot
+    env: docker
+    plan: starter
+    autoDeploy: false
+    healthCheckPath: /health
+    envVars:
+      - key: PORT
+        value: 8787
+      - key: DRY_RUN
+        value: 1
+      - key: ALLOW_UNAUTHENTICATED_LOOPBACK
+        value: 0
+      - key: MAX_BODY_BYTES
+        value: 1048576
+      - key: REQUESTS_PER_MINUTE
+        value: 120
+      - key: ADMIN_API_TOKEN
+        sync: false
+      - key: WEBHOOK_TOKEN
+        sync: false
+      - key: TWILIO_AUTH_TOKEN
+        sync: false
+      - key: TWILIO_API_KEY_SID
+        sync: false
+      - key: TWILIO_API_KEY_SECRET
+        sync: false

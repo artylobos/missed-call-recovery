@@ -1,0 +1,8 @@
+.env
+.git
+__pycache__/
+*.pyc
+data/
+validation/*-scored.csv
+validation/google-places-*.csv
+validation/outreach-drafts.csv
