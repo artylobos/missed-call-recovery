@@ -67,6 +67,14 @@ def main() -> None:
     report_rows = file_rows(VALIDATION / "daily-report-template.csv")
     runtime_health = health()
     google_ready = google_rows >= 40
+    public_runtime_secrets_ready = all(
+        env_present(name)
+        for name in ("ADMIN_API_TOKEN", "WEBHOOK_TOKEN", "TWILIO_AUTH_TOKEN")
+    )
+    twilio_sender_ready = twilio_send_credentials_present() and (
+        env_present("TWILIO_FROM_NUMBER") or env_present("TWILIO_MESSAGING_SERVICE_SID")
+    )
+    real_sms_enabled = os.getenv("DRY_RUN", "1").lower() in {"0", "false", "no"}
     payment_ready = env_present("PAYMENT_LINK") or env_present("INVOICE_LINK")
     sender_identity_ready = all(
         env_present(name)
@@ -113,18 +121,21 @@ def main() -> None:
         ),
         status_item(
             "public_runtime_secrets",
-            all(
-                env_present(name)
-                for name in ("ADMIN_API_TOKEN", "WEBHOOK_TOKEN", "TWILIO_AUTH_TOKEN")
-            ),
-            "Needed before public deployment: ADMIN_API_TOKEN, WEBHOOK_TOKEN, TWILIO_AUTH_TOKEN",
+            public_runtime_secrets_ready,
+            "Public runtime secrets present"
+            if public_runtime_secrets_ready
+            else "Needed before public deployment: ADMIN_API_TOKEN, WEBHOOK_TOKEN, TWILIO_AUTH_TOKEN",
         ),
         status_item(
             "twilio_real_sms",
-            twilio_send_credentials_present()
-            and (env_present("TWILIO_FROM_NUMBER") or env_present("TWILIO_MESSAGING_SERVICE_SID"))
-            and os.getenv("DRY_RUN", "1").lower() in {"0", "false", "no"},
-            "Needs Twilio sender plus Account SID/Auth Token or API Key credentials; keep DRY_RUN=1 until verified",
+            twilio_sender_ready and real_sms_enabled,
+            "Twilio real SMS enabled"
+            if twilio_sender_ready and real_sms_enabled
+            else (
+                "Twilio credentials and sender present; keep DRY_RUN=1 until verified"
+                if twilio_sender_ready
+                else "Needs Twilio sender plus Account SID/Auth Token or API Key credentials; keep DRY_RUN=1 until verified"
+            ),
         ),
         status_item(
             "payment_ready",
