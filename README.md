@@ -133,6 +133,7 @@ Setup handoff docs:
 - `validation/account-and-env-guide.md`
 - `validation/deployment-checklist.md`
 - `validation/pilot-scope.md`
+- `validation/call-and-demo-playbook.md`
 
 Deploy helpers included:
 
