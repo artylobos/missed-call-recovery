@@ -66,6 +66,12 @@ def main() -> None:
     google_rows = file_rows(VALIDATION / "google-places-sydney-plumbing.csv")
     report_rows = file_rows(VALIDATION / "daily-report-template.csv")
     runtime_health = health()
+    google_ready = google_rows >= 40
+    payment_ready = env_present("PAYMENT_LINK") or env_present("INVOICE_LINK")
+    sender_identity_ready = all(
+        env_present(name)
+        for name in ("OUTREACH_SENDER_NAME", "OUTREACH_REPLY_TO", "OUTREACH_CALLBACK_PHONE")
+    )
 
     items = [
         status_item(
@@ -90,8 +96,10 @@ def main() -> None:
         ),
         status_item(
             "google_places_import",
-            google_rows >= 40,
-            f"{google_rows} Google Places prospects; needs GOOGLE_MAPS_API_KEY for live import",
+            google_ready,
+            f"{google_rows} Google Places prospects imported"
+            if google_ready
+            else f"{google_rows} Google Places prospects; needs GOOGLE_MAPS_API_KEY for live import",
         ),
         status_item(
             "runtime_local",
@@ -120,16 +128,17 @@ def main() -> None:
         ),
         status_item(
             "payment_ready",
-            env_present("PAYMENT_LINK") or env_present("INVOICE_LINK"),
-            "Needed to close first money: PAYMENT_LINK or INVOICE_LINK",
+            payment_ready,
+            "Payment link or invoice link present"
+            if payment_ready
+            else "Needed to close first money: PAYMENT_LINK or INVOICE_LINK",
         ),
         status_item(
             "sender_identity_ready",
-            all(
-                env_present(name)
-                for name in ("OUTREACH_SENDER_NAME", "OUTREACH_REPLY_TO", "OUTREACH_CALLBACK_PHONE")
-            ),
-            "Needed before outreach: OUTREACH_SENDER_NAME, OUTREACH_REPLY_TO, OUTREACH_CALLBACK_PHONE",
+            sender_identity_ready,
+            "Outreach sender identity present"
+            if sender_identity_ready
+            else "Needed before outreach: OUTREACH_SENDER_NAME, OUTREACH_REPLY_TO, OUTREACH_CALLBACK_PHONE",
         ),
     ]
 
