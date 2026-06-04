@@ -14,8 +14,8 @@ owner, and report how many leads were recovered.
 
 Default paid pilot:
 
-- Setup: USD 300-500
-- Monthly: USD 299-500
+- Pilot: AUD 300 for 7 days
+- Monthly: AUD 499 if useful leads are recovered
 - Scope: missed-call textback or after-hours intake only
 - Kill rule: no free pilots unless the merchant provides real missed-call data
 

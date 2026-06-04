@@ -1,7 +1,7 @@
-# AI Receptionist Autopilot
+# Missed Call Recovery
 
-Minimal runtime for a sellable local-service phone automation demo. It is built
-to prove the money loop first:
+Minimal runtime for a sellable missed-call recovery demo for local-service
+businesses. It is built to prove the money loop first:
 
 ```text
 missed call or AI voice tool call
@@ -17,7 +17,7 @@ or Twilio own the telephony and AI voice layer.
 ## Quick Start
 
 ```bash
-cd /Users/boliu/ai-receptionist-autopilot
+cd /Users/boliu/missed-call-recovery
 cp .env.example .env
 make autopilot
 ```
@@ -28,14 +28,14 @@ make autopilot
 Manual foreground run:
 
 ```bash
-cd /Users/boliu/ai-receptionist-autopilot
+cd /Users/boliu/missed-call-recovery
 make run
 ```
 
 In another terminal:
 
 ```bash
-cd /Users/boliu/ai-receptionist-autopilot
+cd /Users/boliu/missed-call-recovery
 make smoke
 ```
 
@@ -139,3 +139,7 @@ Deploy helpers included:
 - `Dockerfile`
 - `Procfile`
 - `render.yaml`
+
+GitHub repo:
+
+- `https://github.com/artylobos/missed-call-recovery`

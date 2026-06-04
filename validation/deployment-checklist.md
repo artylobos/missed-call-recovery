@@ -6,8 +6,8 @@ Deploy the runtime as a small HTTPS web service.
 
 Recommended simplest path:
 
-1. Create a private GitHub repo.
-2. Push `/Users/boliu/ai-receptionist-autopilot`.
+1. Use the GitHub repo `https://github.com/artylobos/missed-call-recovery`.
+2. Deploy `/Users/boliu/missed-call-recovery`.
 3. Deploy with Render, Railway, Fly, Zeabur, or a VPS. The repo includes a
    `Dockerfile`, `Procfile`, and `render.yaml`.
 4. Set environment variables from `.env.example`.
