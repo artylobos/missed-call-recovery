@@ -3,15 +3,15 @@ from __future__ import annotations
 
 import argparse
 import csv
+import http.client
 import json
 import os
 import sys
 import time
-from urllib import request
-from urllib.error import HTTPError
 
 
-ENDPOINT = "https://places.googleapis.com/v1/places:searchText"
+API_HOST = "places.googleapis.com"
+API_PATH = "/v1/places:searchText"
 DEFAULT_FIELD_MASK = ",".join(
     [
         "places.id",
@@ -26,6 +26,16 @@ DEFAULT_FIELD_MASK = ",".join(
         "nextPageToken",
     ]
 )
+DEFAULT_QUERIES = [
+    "emergency plumber Sydney NSW",
+    "blocked drain plumber Sydney NSW",
+    "24 hour plumber Sydney NSW",
+    "after hours plumber Sydney NSW",
+    "hot water emergency plumber Sydney NSW",
+    "plumber Inner West Sydney NSW",
+    "plumber North Shore Sydney NSW",
+    "plumber Eastern Suburbs Sydney NSW",
+]
 
 FIELDNAMES = [
     "business_name",
@@ -63,8 +73,9 @@ def parse_args() -> argparse.Namespace:
     )
     parser.add_argument(
         "--query",
-        default="emergency plumber blocked drains Sydney NSW",
-        help="Google Places text query.",
+        action="append",
+        dest="queries",
+        help="Google Places text query. Can be used more than once.",
     )
     parser.add_argument("--city", default="Sydney")
     parser.add_argument("--vertical", default="plumbing")
@@ -81,22 +92,29 @@ def parse_args() -> argparse.Namespace:
 
 def post_places(api_key: str, body: dict) -> dict:
     data = json.dumps(body).encode("utf-8")
-    req = request.Request(
-        ENDPOINT,
-        data=data,
-        headers={
-            "Content-Type": "application/json",
-            "X-Goog-Api-Key": api_key,
-            "X-Goog-FieldMask": DEFAULT_FIELD_MASK,
-        },
-        method="POST",
-    )
+    connection = http.client.HTTPSConnection(API_HOST, timeout=20)
     try:
-        with request.urlopen(req, timeout=20) as response:
-            return json.loads(response.read().decode("utf-8"))
-    except HTTPError as exc:
-        detail = exc.read().decode("utf-8", errors="replace")
-        raise SystemExit(f"Google Places request failed: {exc.code} {detail}") from exc
+        connection.request(
+            "POST",
+            API_PATH,
+            body=data,
+            headers={
+                "Content-Type": "application/json",
+                "X-Goog-Api-Key": api_key,
+                "X-Goog-FieldMask": DEFAULT_FIELD_MASK,
+            },
+        )
+        response = connection.getresponse()
+        detail = response.read().decode("utf-8", errors="replace")
+    except OSError as exc:
+        raise SystemExit(f"Google Places request failed: {exc}") from exc
+    finally:
+        connection.close()
+
+    if response.status >= 400:
+        raise SystemExit(f"Google Places request failed: {response.status} {detail}")
+
+    return json.loads(detail)
 
 
 def place_name(place: dict) -> str:
@@ -118,11 +136,11 @@ def looks_like_booking_site(website: str) -> bool:
     return any(term in text for term in ("book", "booking", "servicem8", "simpro"))
 
 
-def to_row(place: dict, args: argparse.Namespace) -> dict[str, str]:
+def to_row(place: dict, args: argparse.Namespace, query: str) -> dict[str, str]:
     name = place_name(place)
     website = place.get("websiteUri", "")
     hours = place.get("regularOpeningHours") or {}
-    emergency = has_emergency_signal(name, args.query, hours)
+    emergency = has_emergency_signal(name, query, hours)
     maps_url = place.get("googleMapsUri", "")
     address = place.get("formattedAddress", "")
     place_id = place.get("id", "")
@@ -150,32 +168,38 @@ def fetch_rows(args: argparse.Namespace) -> list[dict[str, str]]:
         raise SystemExit(f"Set {args.api_key_env} before running this script.")
 
     rows: list[dict[str, str]] = []
-    next_page_token = ""
     seen: set[str] = set()
 
-    while len(rows) < args.limit:
-        body = {
-            "textQuery": args.query,
-            "regionCode": "AU",
-            "pageSize": min(args.page_size, args.limit - len(rows)),
-        }
-        if next_page_token:
-            body["pageToken"] = next_page_token
+    for query in args.queries or DEFAULT_QUERIES:
+        next_page_token = ""
+        while len(rows) < args.limit:
+            before_count = len(rows)
+            body = {
+                "textQuery": query,
+                "regionCode": "AU",
+                "pageSize": min(args.page_size, args.limit),
+            }
+            if next_page_token:
+                body["pageToken"] = next_page_token
 
-        payload = post_places(api_key, body)
-        for place in payload.get("places", []):
-            key = place.get("id") or place_name(place)
-            if not key or key in seen:
-                continue
-            seen.add(key)
-            rows.append(to_row(place, args))
-            if len(rows) >= args.limit:
+            payload = post_places(api_key, body)
+            for place in payload.get("places", []):
+                key = place.get("id") or place_name(place)
+                if not key or key in seen:
+                    continue
+                seen.add(key)
+                rows.append(to_row(place, args, query))
+                if len(rows) >= args.limit:
+                    break
+
+            next_page_token = payload.get("nextPageToken", "")
+            if len(rows) == before_count:
                 break
-
-        next_page_token = payload.get("nextPageToken", "")
-        if not next_page_token:
+            if not next_page_token:
+                break
+            time.sleep(2)
+        if len(rows) >= args.limit:
             break
-        time.sleep(2)
 
     return rows
 
